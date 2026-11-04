@@ -17,5 +17,8 @@ def health_check():
         conn = psycopg2.connect(DATABASE_URL)
         conn.close()
         return {"status": "healthy", "database": "connected"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database unhealthy: {str(e)}")
+    except psycopg2.Error:
+        raise HTTPException(
+            status_code=503,
+            detail="Database unavailable"
+        )
