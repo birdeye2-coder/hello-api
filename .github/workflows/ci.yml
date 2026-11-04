@@ -1,11 +1,54 @@
 name: ci
+
 on:
   push:
     branches: [main]
+  pull_request:
+
 jobs:
   build-test:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Build image
         run: docker build -t hello-api:ci .
+
+      - name: Run API container
+        run: |
+          docker run -d --name api -p 8000:8000 --add-host=host.docker.internal:host-gateway \
+            -e DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/postgres \
+            hello-api:ci
+
+      - name: Diagnose API container
+        run: |
+          sleep 5
+          docker ps -a
+          docker inspect api --format 'Status={{.State.Status}} ExitCode={{.State.ExitCode}} Error={{.State.Error}}'
+          docker logs api
+
+      - name: Smoke test
+        run: |
+          curl --fail --retry 10 --retry-connrefused --retry-delay 2 \
+            http://localhost:8000/health
+
+      - name: Show API logs if a step fails
+        if: failure()
+        run: docker logs api
