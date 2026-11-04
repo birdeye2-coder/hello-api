@@ -39,6 +39,7 @@ jobs:
 
       - name: Diagnose API container
         run: |
+          sleep 5
           docker ps -a
           docker inspect api --format 'Status={{.State.Status}} ExitCode={{.State.ExitCode}} Error={{.State.Error}}'
           docker logs api
