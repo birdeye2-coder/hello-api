@@ -37,6 +37,12 @@ jobs:
             -e DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/postgres \
             hello-api:ci
 
+      - name: Diagnose API container
+        run: |
+          docker ps -a
+          docker inspect api --format 'Status={{.State.Status}} ExitCode={{.State.ExitCode}} Error={{.State.Error}}'
+          docker logs api
+
       - name: Smoke test
         run: |
           curl --fail --retry 10 --retry-connrefused --retry-delay 2 \
